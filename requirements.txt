@@ -1,2 +1,4 @@
 flask
 vercel
+fastapi
+uvicorn

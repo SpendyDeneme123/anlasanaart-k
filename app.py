@@ -1,29 +1,15 @@
-from flask import Flask, request, jsonify
-import json
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Anahtarları tutacak liste
-keys = []
+class KeyRequest(BaseModel):
+    discord_id: str
+    discord_tag: str
+    key: str
 
-@app.route('/endpoint', methods=['POST'])
-def handle_key():
-    data = request.json  # Gönderilen JSON verisini alıyoruz
-    key = data.get('key')
-    user_id = data.get('userId')
-    username = data.get('username')
-
-    # Anahtarı kaydediyoruz (JSON dosyasına)
-    keys.append({
-        'key': key,
-        'user_id': user_id,
-        'username': username
-    })
-    
-    with open('keys.json', 'w') as f:
-        json.dump(keys, f, indent=2)
-
-    return jsonify({"message": "Key received successfully!"}), 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.post("/save-key")
+async def save_key(data: KeyRequest):
+    print(f"Key received from {data.discord_tag} ({data.discord_id}): {data.key}")
+    # Buraya veritabanı kaydı veya dosyaya yazma gibi işlemler ekleyebilirsin
+    return {"status": "success", "message": "Key received successfully"}
