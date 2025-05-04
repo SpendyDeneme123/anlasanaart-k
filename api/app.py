@@ -1,31 +1,46 @@
 from flask import Flask, request, jsonify
+import json
 import os
 
 app = Flask(__name__)
 
-# Bu dosyada keyler saklanacak
-keys = {}
+DATA_FILE = 'keys.json'
 
+# JSON dosyasını hazırla
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, 'w') as f:
+        json.dump([], f)
+
+@app.route('/')
+def home():
+    return jsonify({"message": "API is live."})
+
+# Buraya Discord'dan key POST edilecek
 @app.route('/store-key', methods=['POST'])
 def store_key():
-    data = request.json
-    key = data.get('key')
-    user_id = data.get('user_id')
+    try:
+        data = request.get_json()
+        key = data.get('key')
+        user_id = data.get('user_id')
 
-    if not key or not user_id:
-        return jsonify({"error": "Key and user_id are required"}), 400
+        if not key or not user_id:
+            return jsonify({'error': 'Key or user_id is missing'}), 400
 
-    # Key'i veritabanına veya dosyaya kaydetme
-    keys[user_id] = key  # Örnek olarak user_id ile key saklanıyor
+        # Key'i kaydet
+        with open(DATA_FILE, 'r+') as f:
+            keys = json.load(f)
+            keys.append({'key': key, 'user_id': user_id})
+            f.seek(0)
+            json.dump(keys, f, indent=2)
+        
+        return jsonify({'message': 'Key stored successfully'})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    return jsonify({"message": "Key saved successfully"}), 200
-
-@app.route('/get-key/<user_id>', methods=['GET'])
-def get_key(user_id):
-    key = keys.get(user_id)
-    if not key:
-        return jsonify({"error": "Key not found for this user"}), 404
-    return jsonify({"key": key}), 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# Key'leri listelemek için:
+@app.route('/keys', methods=['GET'])
+def get_keys():
+    with open(DATA_FILE, 'r') as f:
+        keys = json.load(f)
+    return jsonify(keys)
