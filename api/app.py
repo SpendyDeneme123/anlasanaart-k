@@ -3,34 +3,29 @@ import os
 
 app = Flask(__name__)
 
-# Ortam değişkeninden secret al (Vercel > Settings > Environment Variables kısmına ekle)
-API_SECRET = os.environ.get("API_SECRET")
+# Bu dosyada keyler saklanacak
+keys = {}
 
-# Key'leri burada tut (isteğe bağlı: veritabanı yerine liste)
-stored_keys = []
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "API is live."})
-
-@app.route("/store-key", methods=["POST"])
+@app.route('/store-key', methods=['POST'])
 def store_key():
-    # Authorization header kontrolü
-    auth_header = request.headers.get("Authorization")
-
-    if not auth_header or auth_header != f"Bearer {API_SECRET}":
-        return jsonify({"error": "Unauthorized"}), 401
-
-    data = request.get_json()
-    key = data.get("key")
-    user_id = data.get("user_id")
+    data = request.json
+    key = data.get('key')
+    user_id = data.get('user_id')
 
     if not key or not user_id:
-        return jsonify({"error": "Missing key or user_id"}), 400
+        return jsonify({"error": "Key and user_id are required"}), 400
 
-    stored_keys.append({"key": key, "user_id": user_id})
-    return jsonify({"message": "Key stored successfully.", "total": len(stored_keys)}), 200
+    # Key'i veritabanına veya dosyaya kaydetme
+    keys[user_id] = key  # Örnek olarak user_id ile key saklanıyor
 
-@app.route("/keys", methods=["GET"])
-def get_keys():
-    return jsonify({"keys": stored_keys})
+    return jsonify({"message": "Key saved successfully"}), 200
+
+@app.route('/get-key/<user_id>', methods=['GET'])
+def get_key(user_id):
+    key = keys.get(user_id)
+    if not key:
+        return jsonify({"error": "Key not found for this user"}), 404
+    return jsonify({"key": key}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
