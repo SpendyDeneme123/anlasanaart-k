@@ -1,21 +1,29 @@
-from flask import Flask, jsonify
-import random
-import string
+from flask import Flask, request, jsonify
+import json
 
 app = Flask(__name__)
 
-# Anahtarları rastgele oluşturma fonksiyonu
-def generate_key():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+# Anahtarları tutacak liste
+keys = []
 
-@app.route('/')
-def home():
-    return jsonify({"message": "Welcome to the API!"})
+@app.route('/endpoint', methods=['POST'])
+def handle_key():
+    data = request.json  # Gönderilen JSON verisini alıyoruz
+    key = data.get('key')
+    user_id = data.get('userId')
+    username = data.get('username')
 
-@app.route('/generate_key', methods=['GET'])
-def generate_api_key():
-    api_key = generate_key()
-    return jsonify({"api_key": api_key})
+    # Anahtarı kaydediyoruz (JSON dosyasına)
+    keys.append({
+        'key': key,
+        'user_id': user_id,
+        'username': username
+    })
+    
+    with open('keys.json', 'w') as f:
+        json.dump(keys, f, indent=2)
+
+    return jsonify({"message": "Key received successfully!"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
