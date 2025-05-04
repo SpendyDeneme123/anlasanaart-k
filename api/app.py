@@ -1,34 +1,36 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-import json
+from flask import Flask, request, jsonify
 import os
 
-app = FastAPI()
+app = Flask(__name__)
 
-DATA_FILE = "keys.json"
+# Ortam değişkeninden secret al (Vercel > Settings > Environment Variables kısmına ekle)
+API_SECRET = os.environ.get("API_SECRET")
 
-class KeyData(BaseModel):
-    user_id: str
-    username: str
-    key: str
+# Key'leri burada tut (isteğe bağlı: veritabanı yerine liste)
+stored_keys = []
 
-def save_key(data: dict):
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            all_data = json.load(f)
-    else:
-        all_data = []
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "API is live."})
 
-    all_data.append(data)
+@app.route("/store-key", methods=["POST"])
+def store_key():
+    # Authorization header kontrolü
+    auth_header = request.headers.get("Authorization")
 
-    with open(DATA_FILE, "w") as f:
-        json.dump(all_data, f, indent=2)
+    if not auth_header or auth_header != f"Bearer {API_SECRET}":
+        return jsonify({"error": "Unauthorized"}), 401
 
-@app.post("/store-key")
-async def store_key(data: KeyData):
-    save_key(data.dict())
-    return {"status": "success", "message": "Key stored."}
+    data = request.get_json()
+    key = data.get("key")
+    user_id = data.get("user_id")
 
-@app.get("/")
-def root():
-    return {"message": "API is live."}
+    if not key or not user_id:
+        return jsonify({"error": "Missing key or user_id"}), 400
+
+    stored_keys.append({"key": key, "user_id": user_id})
+    return jsonify({"message": "Key stored successfully.", "total": len(stored_keys)}), 200
+
+@app.route("/keys", methods=["GET"])
+def get_keys():
+    return jsonify({"keys": stored_keys})

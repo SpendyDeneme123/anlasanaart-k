@@ -1,7 +1,9 @@
-[
-  {
-    "user_id": "123456789",
-    "username": "testuser",
-    "key": "ABC123-XYZ"
-  }
-]
+{
+  "keys": [
+    {
+      "user_id": "123",
+      "username": "myuser",
+      "key": "A1-B2-C3"
+    }
+  ]
+}
