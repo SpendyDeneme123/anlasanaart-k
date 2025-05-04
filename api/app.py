@@ -1,29 +1,36 @@
 from flask import Flask, request, jsonify
+import os
 
 app = Flask(__name__)
 
-@app.route('/api/upload', methods=['POST'])
-def upload():
+# Ortam değişkeninden secret al (Vercel > Settings > Environment Variables kısmına ekle)
+API_SECRET = os.environ.get("API_SECRET")
+
+# Key'leri burada tut (isteğe bağlı: veritabanı yerine liste)
+stored_keys = []
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "API is live."})
+
+@app.route("/store-key", methods=["POST"])
+def store_key():
+    # Authorization header kontrolü
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header or auth_header != f"Bearer {API_SECRET}":
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json()
+    key = data.get("key")
+    user_id = data.get("user_id")
 
-    # Verileri al
-    user_id = data.get('user_id')
-    key = data.get('key')
-    timestamp = data.get('timestamp')
+    if not key or not user_id:
+        return jsonify({"error": "Missing key or user_id"}), 400
 
-    # Hata kontrolü
-    if not user_id or not key or not timestamp:
-        return jsonify({"error": "Missing data"}), 400
+    stored_keys.append({"key": key, "user_id": user_id})
+    return jsonify({"message": "Key stored successfully.", "total": len(stored_keys)}), 200
 
-    # Veriyi logla (örnek olarak data.txt'ye yazılıyor)
-    try:
-        with open("data.txt", "a") as f:
-            f.write(f"{timestamp} - {user_id} - {key}\n")
-    except Exception as e:
-        return jsonify({"error": f"Error writing data: {str(e)}"}), 500
-
-    # Başarılı yanıt
-    return jsonify({"status": "ok"}), 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route("/keys", methods=["GET"])
+def get_keys():
+    return jsonify({"keys": stored_keys})
